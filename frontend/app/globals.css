@@ -1,0 +1,936 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+/* ============================================================
+   Signal Dark Theme — CSS Custom Properties
+   ============================================================ */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #1b1b1b;
+  --bg-secondary: #2b2b2b;
+  --bg-tertiary: #222222;
+  --bg-chat: #0d0d0d;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --bg-active: rgba(255, 255, 255, 0.08);
+  --bg-input: #2b2b2b;
+  --bg-bubble-sent: #3797f0;
+  --bg-bubble-received: #2b2b2b;
+  --bg-bubble-system: transparent;
+  --bg-modal: #1f1f1f;
+  --bg-overlay: rgba(0, 0, 0, 0.6);
+  --bg-dropdown: #2b2b2b;
+
+  /* Text */
+  --text-primary: #e9e9e9;
+  --text-secondary: #8e8e8e;
+  --text-tertiary: #555555;
+  --text-accent: #3797f0;
+  --text-bubble-sent: #ffffff;
+  --text-bubble-received: #e9e9e9;
+  --text-muted: #666666;
+  --text-danger: #ff4d4d;
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-focus: #3797f0;
+
+  /* Accent */
+  --accent: #3797f0;
+  --accent-hover: #2c6bed;
+  --accent-muted: rgba(55, 151, 240, 0.15);
+
+  /* Status */
+  --online: #34c759;
+  --delivered: rgba(255, 255, 255, 0.72);
+  --read: #ffffff;
+  --receipt-sent: rgba(255, 255, 255, 0.58);
+  --receipt-delivered: rgba(255, 255, 255, 0.78);
+  --receipt-read: #f7fbff;
+
+  /* Sidebar */
+  --sidebar-width: 76px;
+  --convo-list-width: 388px;
+
+  /* Misc */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 24px;
+  --radius-bubble: 20px;
+  --transition: 150ms ease;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#__next,
+body>div {
+  height: 100%;
+}
+
+/* ============================================================
+   Scrollbars (thin, dark)
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Forms & Inputs
+   ============================================================ */
+
+input,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+input:focus,
+textarea:focus {
+  border-color: var(--border-focus);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  transition: background-color var(--transition), opacity var(--transition);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   Utility Classes
+   ============================================================ */
+
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.items-start {
+  align-items: flex-start;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.gap-1 {
+  gap: 4px;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+.gap-3 {
+  gap: 12px;
+}
+
+.gap-4 {
+  gap: 16px;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.h-full {
+  height: 100%;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.text-base {
+  font-size: 14px;
+}
+
+.text-lg {
+  font-size: 16px;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relative {
+  position: relative;
+}
+
+.absolute {
+  position: absolute;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.inset-0 {
+  inset: 0;
+}
+
+.z-10 {
+  z-index: 10;
+}
+
+.z-50 {
+  z-index: 50;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip: rect(0, 0, 0, 0);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.4;
+  }
+
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============================================================
+   Signal Shell Layout
+   ============================================================ */
+
+.signal-shell {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.signal-icon-rail {
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 0;
+  gap: 8px;
+  z-index: 20;
+}
+
+.signal-convo-panel {
+  width: var(--convo-list-width);
+  min-width: var(--convo-list-width);
+  background: var(--bg-primary);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.signal-chat-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-chat);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Message Bubbles
+   ============================================================ */
+
+.bubble-sent {
+  background: var(--bg-bubble-sent);
+  color: var(--text-bubble-sent);
+  border-radius: var(--radius-bubble) var(--radius-bubble) 4px var(--radius-bubble);
+  animation: slideInRight 120ms ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.bubble-received {
+  background: var(--bg-bubble-received);
+  color: var(--text-bubble-received);
+  border-radius: var(--radius-bubble) var(--radius-bubble) var(--radius-bubble) 4px;
+  border: 1px solid var(--border-subtle);
+  animation: slideInLeft 120ms ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.bubble-content {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.bubble-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.bubble-time {
+  font-size: 11px;
+  line-height: 1;
+  opacity: 0.82;
+}
+
+.bubble-sent .bubble-time {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.bubble-received .bubble-time {
+  color: var(--text-secondary);
+}
+
+.bubble-sender-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+/* ============================================================
+   Read Receipts (Sent → Delivered → Read)
+   ============================================================ */
+
+.message-receipt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  transition: color 0.35s ease, opacity 0.35s ease, transform 0.25s ease;
+}
+
+.bubble-sent .message-receipt--sending,
+.bubble-sent .message-receipt--sent {
+  color: var(--receipt-sent);
+  opacity: 0.85;
+}
+
+.bubble-sent .message-receipt--delivered {
+  color: var(--receipt-delivered);
+  opacity: 1;
+  animation: receiptUpgrade 0.3s ease;
+}
+
+.bubble-sent .message-receipt--read {
+  color: var(--receipt-read);
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
+  animation: receiptRead 0.35s ease;
+}
+
+.receipt-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  border-radius: 8px;
+  padding: 1px;
+}
+
+.receipt-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.receipt-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.receipt-pill--sent {
+  color: var(--receipt-sent);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.receipt-pill--delivered {
+  color: var(--receipt-delivered);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.receipt-pill--read {
+  color: #0d0d0d;
+  background: var(--receipt-read);
+}
+
+@keyframes receiptUpgrade {
+  0% {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+
+  60% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes receiptRead {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.6;
+    color: var(--receipt-delivered);
+  }
+
+  50% {
+    transform: scale(1.12);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    color: var(--receipt-read);
+  }
+}
+
+.bubble-deleted {
+  opacity: 0.5;
+  font-style: italic;
+}
+
+/* ============================================================
+   Icon Rail Buttons
+   ============================================================ */
+
+.rail-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.rail-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rail-btn.active {
+  background: var(--accent-muted);
+  color: var(--accent);
+}
+
+/* ============================================================
+   Conversation Item
+   ============================================================ */
+
+.convo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background-color var(--transition);
+  border-radius: 0;
+  position: relative;
+}
+
+.convo-item:hover {
+  background: var(--bg-hover);
+}
+
+.convo-item.active {
+  background: var(--bg-active);
+}
+
+/* ============================================================
+   Loading skeleton
+   ============================================================ */
+
+.skeleton {
+  background: linear-gradient(90deg,
+      var(--bg-secondary) 25%,
+      rgba(255, 255, 255, 0.05) 50%,
+      var(--bg-secondary) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+/* ============================================================
+   Modal
+   ============================================================ */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 150ms ease;
+}
+
+.modal-box {
+  background: var(--bg-modal);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 460px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: fadeIn 150ms ease;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 15px;
+  width: 100%;
+  text-align: center;
+  transition: background-color var(--transition);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-ghost {
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  transition: background-color var(--transition), color var(--transition);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-danger {
+  background: transparent;
+  color: var(--text-danger);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  transition: background-color var(--transition);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(255, 77, 77, 0.1);
+}
+
+/* ============================================================
+   Search Input
+   ============================================================ */
+
+.search-input-wrap {
+  position: relative;
+  padding: 10px 14px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 14px 12px 42px;
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.search-input:focus {
+  border-color: transparent;
+  background: var(--bg-tertiary);
+}
+
+.search-icon {
+  position: absolute;
+  left: 26px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* ============================================================
+   Typing dots
+   ============================================================ */
+
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  display: inline-block;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* ============================================================
+   Auth page
+   ============================================================ */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-primary);
+  padding: 24px;
+}
+
+.auth-card {
+  background: var(--bg-modal);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 48px 36px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 32px 64px rgba(0, 0, 0, 0.5);
+  animation: fadeIn 200ms ease;
+}
+
+/* ============================================================
+   Phone Input (+91 prefix)
+   ============================================================ */
+
+.phone-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  transition: border-color var(--transition);
+}
+
+.phone-input-wrap:focus-within {
+  border-color: var(--border-focus);
+}
+
+.phone-input-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.phone-input-prefix {
+  margin-left: 38px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  -webkit-user-select: none;
+  user-select: none;
+  padding-right: 4px;
+}
+
+.phone-input-field {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  padding: 12px 14px 12px 0 !important;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+.phone-input-field:focus {
+  border-color: transparent !important;
+  outline: none;
+}
+
+.add-contact-section {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.add-contact-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.add-contact-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.add-contact-row .phone-input-wrap {
+  flex: 1;
+}
+
+.add-contact-row .btn-primary {
+  width: auto;
+  min-width: 48px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   Spinner
+   ============================================================ */
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
