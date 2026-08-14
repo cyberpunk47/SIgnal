@@ -56,6 +56,12 @@ export function useWebSocketEvents() {
                     markMessageDelivered(event.message_id, event.user_id);
                     break;
                 }
+                case "member_added":
+                case "member_removed": {
+                    // Refresh conversation list so membership changes reflect immediately
+                    conversationsApi.list().then((response) => setConversations(response.data)).catch(() => { });
+                    break;
+                }
             }
         });
 

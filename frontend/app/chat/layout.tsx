@@ -85,7 +85,10 @@ export default function ChatLayout({ children }: { children: React.ReactNode }) 
           })
         );
 
-        const validUsers = resolvedUsers.filter((user): user is User => user !== null);
+        // Strip is_online from API results — online status must only come from WS events
+        const validUsers = resolvedUsers
+          .filter((user): user is User => user !== null)
+          .map((user) => ({ ...user, is_online: false }));
 
         if (validUsers.length > 0) {
           cacheUsers(validUsers);

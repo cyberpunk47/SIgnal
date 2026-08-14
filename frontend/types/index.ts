@@ -111,4 +111,14 @@ export type WsEvent =
     type: "message_delivered";
     message_id: number;
     user_id: number;
+  }
+  | {
+    type: "member_added";
+    conversation_id: number;
+    user_id: number;
+  }
+  | {
+    type: "member_removed";
+    conversation_id: number;
+    user_id: number;
   };

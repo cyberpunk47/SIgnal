@@ -2,9 +2,11 @@ import axios from "axios";
 import { useStore } from "@/store";
 
 const api = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_API_URL ||
-    "https://signal-wg4o.onrender.com",
+  // Use /api so all requests route through the Next.js rewrite proxy
+  // This avoids CORS issues when deployed on Vercel.
+  // Set NEXT_PUBLIC_API_URL to override (e.g. http://localhost:8000 for local dev
+  // if you want to skip the proxy).
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
   headers: {
     "Content-Type": "application/json",
   },

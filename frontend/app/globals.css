@@ -518,27 +518,22 @@ button:disabled {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  line-height: 0;
-  transition: color 0.35s ease, opacity 0.35s ease, transform 0.25s ease;
+  /* NO line-height:0 — that caused blurry sub-pixel rendering */
+  transition: color 0.3s ease, opacity 0.3s ease;
 }
 
+/* Receipt classes — colors now handled inline in MessageReceipt.tsx */
 .bubble-sent .message-receipt--sending,
 .bubble-sent .message-receipt--sent {
-  color: var(--receipt-sent);
-  opacity: 0.85;
+  opacity: 0.7;
 }
 
 .bubble-sent .message-receipt--delivered {
-  color: var(--receipt-delivered);
   opacity: 1;
-  animation: receiptUpgrade 0.3s ease;
 }
 
 .bubble-sent .message-receipt--read {
-  color: var(--receipt-read);
   opacity: 1;
-  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.55));
-  animation: receiptRead 0.35s ease;
 }
 
 .receipt-button {
@@ -934,3 +929,56 @@ button:disabled {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+
+/* ============================================================
+   Message Context Menu (3-dot)
+   ============================================================ */
+
+/* The 3-dot trigger button — hidden by default, shown on group hover */
+.msg-menu-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--transition), background-color var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+
+.msg-group:hover .msg-menu-btn {
+  opacity: 1;
+}
+
+.msg-menu-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Context menu dropdown */
+.ctx-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background-color var(--transition);
+}
+
+.ctx-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+.ctx-menu-item--danger {
+  color: var(--text-danger);
+}
+
+.ctx-menu-item--danger:hover {
+  background: rgba(255, 77, 77, 0.1);
+}
+

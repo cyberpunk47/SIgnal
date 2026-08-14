@@ -98,7 +98,8 @@ export const useStore = create<Store>()(
         set({
           token,
           currentUser: user,
-          authExpiresAt: Date.now() + 30 * 60 * 1000,
+          // 7 days — so a refresh never logs you out
+          authExpiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
         }),
       setCurrentUser: (user) => set({ currentUser: user }),
       isAuthExpired: () => {
@@ -346,13 +347,34 @@ export const useStore = create<Store>()(
     }),
     {
       name: "signal-store",
-      storage: createJSONStorage(() => sessionStorage),
+      // localStorage persists across refreshes and tab closes
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         token: state.token,
         currentUser: state.currentUser,
         authExpiresAt: state.authExpiresAt,
-        userCache: state.userCache,
+        // Always strip is_online so stale online status never persists
+        userCache: Object.fromEntries(
+          Object.entries(state.userCache).map(([id, user]) => [
+            id,
+            { ...user, is_online: false },
+          ])
+        ),
       }),
+      // Also clear is_online when rehydrating from localStorage
+      onRehydrateStorage: () => (state) => {
+        if (state?.userCache) {
+          state.userCache = Object.fromEntries(
+            Object.entries(state.userCache).map(([id, user]) => [
+              id,
+              { ...(user as unknown as Record<string, unknown>), is_online: false },
+            ])
+          ) as typeof state.userCache;
+        }
+        if (state) {
+          state.onlineUsers = new Set();
+        }
+      },
     }
   )
 );

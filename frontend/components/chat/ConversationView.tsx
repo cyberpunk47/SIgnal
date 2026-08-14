@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Clock3, Eye, Info, Send, UserPlus } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Eye, Info, MoreVertical, Pencil, Send, Trash2, UserPlus } from "lucide-react";
 import { useStore } from "@/store";
 import { contactsApi, conversationsApi, messagesApi, usersApi } from "@/lib/api";
 import { wsManager } from "@/lib/websocket";
@@ -61,6 +61,11 @@ export default function ConversationView({ conversationId }: Props) {
     const [receiptMessage, setReceiptMessage] = useState<Message | null>(null);
     const [receiptRows, setReceiptRows] = useState<MessageStatusRecord[]>([]);
     const [receiptsLoading, setReceiptsLoading] = useState(false);
+    // Message context menu
+    const [menuMessageId, setMenuMessageId] = useState<number | null>(null);
+    const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+    const [editContent, setEditContent] = useState("");
+    const menuRef = useRef<HTMLDivElement | null>(null);
     const bottomRef = useRef<HTMLDivElement | null>(null);
     const lastMarkedReadMessageId = useRef<number | null>(null);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,10 +96,10 @@ export default function ConversationView({ conversationId }: Props) {
         }
 
         const cachedUser = userCache[directOtherId];
+        // Only trust the live WS onlineUsers Set — never stale DB is_online
         const liveOnline = onlineUsers.has(directOtherId);
-        const cachedOnline = Boolean(cachedUser?.is_online);
 
-        if (liveOnline || cachedOnline) {
+        if (liveOnline) {
             return { isOnline: true, label: "Online" };
         }
 
@@ -222,6 +227,19 @@ export default function ConversationView({ conversationId }: Props) {
         };
     }, [conversationId]);
 
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuMessageId(null);
+            }
+        }
+        if (menuMessageId !== null) {
+            document.addEventListener("mousedown", handleClickOutside);
+        }
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [menuMessageId]);
+
     function getConversationTitle(): string {
         if (!conversation) return `Conversation ${conversationId}`;
         if (conversation.type === "group") return conversation.name ?? "Group";
@@ -267,7 +285,8 @@ export default function ConversationView({ conversationId }: Props) {
                 return "read";
             }
 
-            const otherIsOnline = onlineUsers.has(otherId) || Boolean(userCache[otherId]?.is_online);
+            // Only use live WS set for delivery — never stale DB is_online
+            const otherIsOnline = onlineUsers.has(otherId);
             return otherIsOnline ? "delivered" : "sent";
         }
 
@@ -281,8 +300,9 @@ export default function ConversationView({ conversationId }: Props) {
 
         if (everyoneRead) return "read";
 
+        // Only use live WS set for delivery
         const someoneOnline = otherMembers.some(
-            (member) => onlineUsers.has(member.user_id) || Boolean(userCache[member.user_id]?.is_online)
+            (member) => onlineUsers.has(member.user_id)
         );
 
         return someoneOnline ? "delivered" : "sent";
@@ -302,6 +322,38 @@ export default function ConversationView({ conversationId }: Props) {
             addToast("Unable to load read receipts", "error");
         } finally {
             setReceiptsLoading(false);
+        }
+    }
+
+    async function handleEditMessage(messageId: number, newContent: string) {
+        const content = newContent.trim();
+        if (!content) return;
+        try {
+            const res = await messagesApi.update(messageId, content);
+            useStore.getState().updateMessage(conversationId, res.data);
+            addToast("Message updated", "success");
+        } catch {
+            addToast("Failed to edit message", "error");
+        } finally {
+            setEditingMessageId(null);
+            setEditContent("");
+            setMenuMessageId(null);
+        }
+    }
+
+    async function handleDeleteMessage(messageId: number) {
+        try {
+            await messagesApi.delete(messageId);
+            // Mark as deleted locally until WS/reload updates it
+            const existing = (messages[conversationId] ?? []).find(m => m.id === messageId);
+            if (existing) {
+                useStore.getState().updateMessage(conversationId, { ...existing, is_deleted: true, content: null });
+            }
+            addToast("Message deleted", "info");
+        } catch {
+            addToast("Failed to delete message", "error");
+        } finally {
+            setMenuMessageId(null);
         }
     }
 
@@ -570,6 +622,19 @@ export default function ConversationView({ conversationId }: Props) {
                         const isMine = message.sender_id === currentUser?.id;
                         const sender = userCache[message.sender_id];
                         const receiptStatus = getMessageStatus(message);
+                        const isMenuOpen = menuMessageId === message.id;
+                        const isEditing = editingMessageId === message.id;
+
+                        // System messages (member added/removed/left)
+                        if (message.message_type === "system") {
+                            return (
+                                <div key={message.client_temp_id ?? message.id} style={{ display: "flex", justifyContent: "center", margin: "4px 0" }}>
+                                    <span style={{ padding: "4px 14px", borderRadius: 999, background: "var(--bg-secondary)", color: "var(--text-muted)", fontSize: 12, border: "1px solid var(--border-subtle)" }}>
+                                        {message.content}
+                                    </span>
+                                </div>
+                            );
+                        }
 
                         return (
                             <div
@@ -577,51 +642,182 @@ export default function ConversationView({ conversationId }: Props) {
                                 style={{
                                     display: "flex",
                                     justifyContent: isMine ? "flex-end" : "flex-start",
+                                    position: "relative",
                                 }}
+                                onMouseLeave={() => { if (!isEditing) setMenuMessageId(null); }}
                             >
+                                {/* 3-dot menu trigger — shown on hover via group */}
                                 <div
-                                    className={isMine ? "bubble-sent" : "bubble-received"}
                                     style={{
-                                        maxWidth: "min(680px, 78%)",
-                                        padding: "10px 14px",
                                         display: "flex",
-                                        flexDirection: "column",
+                                        alignItems: "flex-end",
                                         gap: 6,
+                                        flexDirection: isMine ? "row-reverse" : "row",
+                                        maxWidth: "min(680px, 78%)",
+                                        position: "relative",
                                     }}
+                                    className="msg-group"
                                 >
-                                    {!isMine && conversation?.type === "group" && (
-                                        <p className="bubble-sender-name">
-                                            {sender?.display_name ?? `User ${message.sender_id}`}
-                                        </p>
-                                    )}
+                                    <div
+                                        className={isMine ? "bubble-sent" : "bubble-received"}
+                                        style={{
+                                            padding: "10px 14px",
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            gap: 6,
+                                        }}
+                                    >
+                                        {!isMine && conversation?.type === "group" && (
+                                            <p className="bubble-sender-name">
+                                                {sender?.display_name ?? `User ${message.sender_id}`}
+                                            </p>
+                                        )}
 
-                                    {message.is_deleted ? (
-                                        <p className="bubble-deleted" style={{ margin: 0, fontSize: 16 }}>
-                                            Message deleted
-                                        </p>
-                                    ) : (
-                                        <p className="bubble-content">
-                                            {message.content}
-                                        </p>
-                                    )}
+                                        {isEditing ? (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                <textarea
+                                                    autoFocus
+                                                    value={editContent}
+                                                    onChange={(e) => setEditContent(e.target.value)}
+                                                    rows={2}
+                                                    style={{
+                                                        resize: "none",
+                                                        border: "1px solid var(--accent)",
+                                                        borderRadius: 8,
+                                                        background: "var(--bg-primary)",
+                                                        color: "var(--text-primary)",
+                                                        fontSize: 15,
+                                                        padding: "6px 10px",
+                                                        outline: "none",
+                                                        width: "100%",
+                                                    }}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" && !e.shiftKey) {
+                                                            e.preventDefault();
+                                                            void handleEditMessage(message.id, editContent);
+                                                        }
+                                                        if (e.key === "Escape") {
+                                                            setEditingMessageId(null);
+                                                            setEditContent("");
+                                                        }
+                                                    }}
+                                                />
+                                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                                    <button type="button" className="btn-ghost" style={{ width: "auto", fontSize: 13, padding: "4px 10px" }} onClick={() => { setEditingMessageId(null); setEditContent(""); }}>Cancel</button>
+                                                    <button type="button" className="btn-primary" style={{ width: "auto", fontSize: 13, padding: "4px 10px" }} onClick={() => handleEditMessage(message.id, editContent)}>Save</button>
+                                                </div>
+                                            </div>
+                                        ) : message.is_deleted ? (
+                                            <p className="bubble-deleted" style={{ margin: 0, fontSize: 16 }}>
+                                                Message deleted
+                                            </p>
+                                        ) : (
+                                            <p className="bubble-content">
+                                                {message.content}
+                                            </p>
+                                        )}
 
-                                    <div className="bubble-meta">
-                                        <span className="bubble-time">
-                                            {formatMessageTime(message.created_at)}
-                                        </span>
+                                        <div className="bubble-meta">
+                                            <span className="bubble-time">
+                                                {formatMessageTime(message.created_at)}
+                                            </span>
 
-                                        {receiptStatus && (
+                                            {receiptStatus && (
+                                                <button
+                                                    type="button"
+                                                    className="receipt-button"
+                                                    onClick={() => openReceipts(message)}
+                                                    title="View read receipts"
+                                                    aria-label="View read receipts"
+                                                >
+                                                    <MessageReceipt status={receiptStatus} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* 3-dot menu button */}
+                                    {!message.is_deleted && message.id > 0 && (
+                                        <div style={{ position: "relative", alignSelf: "center" }} ref={isMenuOpen ? menuRef : undefined}>
                                             <button
                                                 type="button"
-                                                className="receipt-button"
-                                                onClick={() => openReceipts(message)}
-                                                title="View read receipts"
-                                                aria-label="View read receipts"
+                                                className="msg-menu-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setMenuMessageId(isMenuOpen ? null : message.id);
+                                                }}
+                                                aria-label="Message options"
+                                                title="More options"
                                             >
-                                                <MessageReceipt status={receiptStatus} />
+                                                <MoreVertical size={15} />
                                             </button>
-                                        )}
-                                    </div>
+
+                                            {isMenuOpen && (
+                                                <div
+                                                    className="msg-context-menu"
+                                                    style={{
+                                                        position: "absolute",
+                                                        top: 0,
+                                                        [isMine ? "right" : "left"]: "100%",
+                                                        marginLeft: isMine ? 0 : 4,
+                                                        marginRight: isMine ? 4 : 0,
+                                                        zIndex: 100,
+                                                        background: "var(--bg-secondary)",
+                                                        border: "1px solid var(--border-subtle)",
+                                                        borderRadius: 10,
+                                                        boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+                                                        minWidth: 160,
+                                                        overflow: "hidden",
+                                                    }}
+                                                >
+                                                    {/* Message Info — always shown for your messages */}
+                                                    {isMine && (
+                                                        <button
+                                                            type="button"
+                                                            className="ctx-menu-item"
+                                                            onClick={() => { openReceipts(message); setMenuMessageId(null); }}
+                                                        >
+                                                            <Info size={15} /> Message Info
+                                                        </button>
+                                                    )}
+                                                    {/* Edit — only for your own non-deleted text messages */}
+                                                    {isMine && message.message_type === "text" && (
+                                                        <button
+                                                            type="button"
+                                                            className="ctx-menu-item"
+                                                            onClick={() => {
+                                                                setEditingMessageId(message.id);
+                                                                setEditContent(message.content ?? "");
+                                                                setMenuMessageId(null);
+                                                            }}
+                                                        >
+                                                            <Pencil size={15} /> Edit
+                                                        </button>
+                                                    )}
+                                                    {/* Delete — for your own messages */}
+                                                    {isMine && (
+                                                        <button
+                                                            type="button"
+                                                            className="ctx-menu-item ctx-menu-item--danger"
+                                                            onClick={() => handleDeleteMessage(message.id)}
+                                                        >
+                                                            <Trash2 size={15} /> Delete
+                                                        </button>
+                                                    )}
+                                                    {/* For others' messages — no edit/delete (Signal design) */}
+                                                    {!isMine && (
+                                                        <button
+                                                            type="button"
+                                                            className="ctx-menu-item"
+                                                            onClick={() => setMenuMessageId(null)}
+                                                        >
+                                                            <Info size={15} /> Info
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

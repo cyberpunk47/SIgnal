@@ -31,8 +31,17 @@ export default function ConversationList({ searchQuery }: Props) {
     return new Date(bt).getTime() - new Date(at).getTime();
   });
 
+  // Filter out conversations where the current user has been kicked / left
+  const visible = sorted.filter((c) => {
+    const myMembership = c.members.find((m) => m.user_id === currentUser?.id);
+    // If we have no membership record at all, still show (direct chats)
+    if (!myMembership) return true;
+    // Hide if we have left / been kicked
+    return myMembership.left_at === null;
+  });
+
   // Filter by search
-  const filtered = sorted.filter((c) => {
+  const filtered = visible.filter((c) => {
     const name = getConversationName(c, currentUser?.id, userCache);
     return name.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -132,7 +141,7 @@ function ConvoItem({
   const name = getConversationName(convo, currentUserId, userCache);
   const userId = getConversationUserId(convo, currentUserId);
   const cachedUser = userCache[userId];
-  const isOnline = convo.type === "direct" ? (onlineUsers.has(userId) || Boolean(cachedUser?.is_online)) : false;
+  const isOnline = convo.type === "direct" ? onlineUsers.has(userId) : false;
 
   const lastTime = formatConversationTime(
     lastMessage?.created_at ?? convo.last_message_at
