@@ -68,7 +68,24 @@ Open `http://127.0.0.1:3000`. FastAPI docs are at `http://127.0.0.1:8000/docs`.
 ## Assignment Notes
 
 - OTP is always `123456`.
-- Sessions persist through refresh, expire after 30 minutes, and are stored in `sessionStorage`, so logout/tab close/browser close clears the frontend session.
 - Group admins can add/remove members and promote/demote roles from the visible Group Info modal.
 - Sent-message ticks are brighter; clicking them opens Message Info showing who has sent/delivered/read the message.
 - Real cryptographic E2EE is intentionally mocked for assignment scope.
+
+## Bugs and Key Trade Offs
+- As limited time the security of this application is not consistent and you might experience.
+- The Users will be Shown as offline instead of Last seen as i had hard time fixing the Web Socket Bug so i made the Web Socket as the ultimate source of truth for the Online and Offline
+- You might notice the converstions are not arranged properly as the Groups are ranked as 1 instead of the Signal feature where the messages which came first or the last interacted messaged should have been on top 
+- The design and the UX is the only thing which i took as trade off while fully implementing the backend to race against the time constraint 
+- Also another thing is the offline status will be shown as Offline until the user logs in and after that if he logs out then his last seen is Changed from Offline to Last seen at 10:10 Am like this . So its a bug 
+
+- Another thing regarding the Last Seen is (Currently only one User is only able to see Online Status as i said earlier i have hard time finding this bug)
+- Sessions are also bugged so if you do a refresh you will be logged out 
+## Working Part
+- Login/ Logout Working 
+- Message Editor and deletion Working 
+- Admin controls working 
+- Demotion and promotion to admin working 
+- Typing Indicator is working but not seen by the user as it is being tested out it in console
+- Leave group and Remove is also working
+- Read Reciepts are working 
