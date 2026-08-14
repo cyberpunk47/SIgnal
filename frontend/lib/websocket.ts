@@ -6,11 +6,20 @@ class WebSocketManager {
   private ws: WebSocket | null = null;
   private userId: number | null = null;
   private listeners: Set<EventListener> = new Set();
+
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = false;
 
   connect(userId: number) {
-    if (this.userId === userId && this.ws) {
+    // Already connected to this user
+    if (
+      this.userId === userId &&
+      this.ws &&
+      (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      )
+    ) {
       return;
     }
 
@@ -18,67 +27,118 @@ class WebSocketManager {
 
     this.userId = userId;
     this.shouldReconnect = true;
+
     this._connect();
   }
 
   private _connect() {
-    if (!this.userId || !this.shouldReconnect) return;
+    if (!this.userId || !this.shouldReconnect) {
+      return;
+    }
 
     if (
       this.ws &&
-      (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)
+      (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      )
     ) {
       return;
     }
 
-    // Use the direct backend URL for WebSocket (Next.js proxy doesn't support WS well)
-    const wsUrl = `ws://localhost:8000/ws/${this.userId}`;
+    const WS_BASE =
+      process.env.NEXT_PUBLIC_WS_URL ||
+      "ws://localhost:8000";
+
+    const wsUrl = `${WS_BASE}/ws/${this.userId}`;
+
+    console.log("[WS] Connecting to:", wsUrl);
+
     const ws = new WebSocket(wsUrl);
+
+    // IMPORTANT:
+    // Store the actual socket instance.
     this.ws = ws;
 
     ws.onopen = () => {
-      console.log(`[WS] Connected user ${this.userId}`);
+      console.log(
+        `[WS] Connected user ${this.userId}`
+      );
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as WsEvent;
-        this.listeners.forEach((listener) => listener(data));
+
+        this.listeners.forEach((listener) => {
+          listener(data);
+        });
       } catch (error) {
-        console.error("[WS] Invalid event:", event.data, error);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log(`[WS] Disconnected user ${this.userId}`);
-
-      if (this.ws === ws) {
-        this.ws = null;
-      }
-
-      if (this.shouldReconnect) {
-        if (this.reconnectTimer) {
-          clearTimeout(this.reconnectTimer);
-        }
-
-        this.reconnectTimer = setTimeout(() => this._connect(), 3000);
+        console.error(
+          "[WS] Invalid event:",
+          event.data,
+          error
+        );
       }
     };
 
     ws.onerror = (error) => {
       console.error("[WS] Error:", error);
+      console.error("[WS] URL:", ws.url);
+      console.error(
+        "[WS] ReadyState:",
+        ws.readyState
+      );
+    };
+
+    ws.onclose = (event) => {
+      console.log(
+        `[WS] Disconnected user ${this.userId}`,
+        {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        }
+      );
+
+      // Only clear if this is still the active socket
+      if (this.ws === ws) {
+        this.ws = null;
+      }
+
+      if (!this.shouldReconnect) {
+        return;
+      }
+
+      if (this.reconnectTimer) {
+        clearTimeout(this.reconnectTimer);
+      }
+
+      this.reconnectTimer = setTimeout(() => {
+        this.reconnectTimer = null;
+        this._connect();
+      }, 3000);
     };
   }
 
   send(data: object) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
+    if (
+      this.ws &&
+      this.ws.readyState === WebSocket.OPEN
+    ) {
       this.ws.send(JSON.stringify(data));
-    } else {
-      console.warn("[WS] Cannot send - socket not connected");
+      return;
     }
+
+    console.warn(
+      "[WS] Cannot send - socket not connected"
+    );
   }
 
-  sendTyping(conversationId: number, isTyping: boolean) {
+  sendTyping(
+    conversationId: number,
+    isTyping: boolean
+  ) {
     this.send({
       type: "typing",
       conversation_id: conversationId,
@@ -88,6 +148,7 @@ class WebSocketManager {
 
   subscribe(listener: EventListener) {
     this.listeners.add(listener);
+
     return () => {
       this.listeners.delete(listener);
     };
@@ -95,6 +156,7 @@ class WebSocketManager {
 
   disconnect() {
     this.shouldReconnect = false;
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
@@ -105,14 +167,15 @@ class WebSocketManager {
       this.ws = null;
     }
 
-    this.ws = null;
     this.userId = null;
   }
 
   get isConnected() {
-    return this.ws?.readyState === WebSocket.OPEN;
+    return (
+      this.ws?.readyState === WebSocket.OPEN
+    );
   }
 }
 
-// Singleton
-export const wsManager = new WebSocketManager();
+export const wsManager =
+  new WebSocketManager();

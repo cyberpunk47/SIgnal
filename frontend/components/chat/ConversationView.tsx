@@ -90,10 +90,11 @@ export default function ConversationView({ conversationId }: Props) {
             return { isOnline: false, label: "" };
         }
 
-        const liveOnline = onlineUsers.has(directOtherId);
         const cachedUser = userCache[directOtherId];
+        const liveOnline = onlineUsers.has(directOtherId);
+        const cachedOnline = Boolean(cachedUser?.is_online);
 
-        if (liveOnline) {
+        if (liveOnline || cachedOnline) {
             return { isOnline: true, label: "Online" };
         }
 

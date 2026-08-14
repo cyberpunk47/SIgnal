@@ -87,7 +87,7 @@ export default function ConversationList({ searchQuery }: Props) {
 function getConversationName(
   convo: Conversation,
   currentUserId: number | undefined,
-  userCache: Record<number, { display_name: string }>
+  userCache: Record<number, { display_name: string; is_online?: boolean }>
 ): string {
   if (convo.type === "group") return convo.name ?? "Group";
   // Direct: find the other member
@@ -111,7 +111,7 @@ function getConversationUserId(
 interface ConvoItemProps {
   convo: Conversation;
   currentUserId: number;
-  userCache: Record<number, { display_name: string; avatar_url?: string | null }>;
+  userCache: Record<number, { display_name: string; avatar_url?: string | null; is_online?: boolean }>;
   onlineUsers: Set<number>;
   isActive: boolean;
   unreadCount: number;
@@ -132,7 +132,7 @@ function ConvoItem({
   const name = getConversationName(convo, currentUserId, userCache);
   const userId = getConversationUserId(convo, currentUserId);
   const cachedUser = userCache[userId];
-  const isOnline = convo.type === "direct" ? onlineUsers.has(userId) : false;
+  const isOnline = convo.type === "direct" ? (onlineUsers.has(userId) || Boolean(cachedUser?.is_online)) : false;
 
   const lastTime = formatConversationTime(
     lastMessage?.created_at ?? convo.last_message_at
