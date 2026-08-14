@@ -2,12 +2,13 @@ import axios from "axios";
 import { useStore } from "@/store";
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    "https://signal-wg4o.onrender.com",
   headers: {
     "Content-Type": "application/json",
   },
 });
-
 // Inject auth token from Zustand store on every request
 api.interceptors.request.use((config) => {
   const state = useStore.getState();

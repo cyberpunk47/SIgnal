@@ -5,20 +5,24 @@ type EventListener = (event: WsEvent) => void;
 class WebSocketManager {
   private ws: WebSocket | null = null;
   private userId: number | null = null;
-  private listeners: Set<EventListener> = new Set();
+
+  private listeners = new Set<EventListener>();
 
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private shouldReconnect = false;
 
+  private reconnectAttempts = 0;
+  private readonly maxReconnectDelay = 10000;
+
   connect(userId: number) {
-    // Already connected to this user
+    if (!userId) return;
+
+    // Already connected/connecting for this user
     if (
       this.userId === userId &&
       this.ws &&
-      (
-        this.ws.readyState === WebSocket.OPEN ||
-        this.ws.readyState === WebSocket.CONNECTING
-      )
+      (this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING)
     ) {
       return;
     }
@@ -27,82 +31,88 @@ class WebSocketManager {
 
     this.userId = userId;
     this.shouldReconnect = true;
+    this.reconnectAttempts = 0;
 
-    this._connect();
+    this.connectSocket();
   }
 
-  private _connect() {
+  private connectSocket() {
     if (!this.userId || !this.shouldReconnect) {
       return;
     }
 
+    // Don't create another connection
     if (
       this.ws &&
-      (
-        this.ws.readyState === WebSocket.OPEN ||
-        this.ws.readyState === WebSocket.CONNECTING
-      )
+      (this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING)
     ) {
       return;
     }
 
-    const WS_BASE =
-      process.env.NEXT_PUBLIC_WS_URL ||
-      "ws://localhost:8000";
+    /*
+     * Production:
+     *   NEXT_PUBLIC_WS_URL=wss://signal-wg4o.onrender.com
+     *
+     * Local:
+     *   NEXT_PUBLIC_WS_URL=ws://localhost:8000
+     *
+     * If NEXT_PUBLIC_WS_URL is missing, automatically use the
+     * current browser host.
+     */
+    let baseUrl = process.env.NEXT_PUBLIC_WS_URL;
 
-    const wsUrl = `${WS_BASE}/ws/${this.userId}`;
+    if (!baseUrl) {
+      const protocol =
+        window.location.protocol === "https:" ? "wss:" : "ws:";
 
-    console.log("[WS] Connecting to:", wsUrl);
+      baseUrl = `${protocol}//${window.location.host}`;
+    }
 
-    const ws = new WebSocket(wsUrl);
+    baseUrl = baseUrl.replace(/\/+$/, "");
 
-    // IMPORTANT:
-    // Store the actual socket instance.
-    this.ws = ws;
+    const wsUrl = `${baseUrl}/ws/${this.userId}`;
 
-    ws.onopen = () => {
-      console.log(
-        `[WS] Connected user ${this.userId}`
-      );
+    console.log("[WS] Connecting:", wsUrl);
+
+    const socket = new WebSocket(wsUrl);
+
+    this.ws = socket;
+
+    socket.onopen = () => {
+      console.log(`[WS] Connected user=${this.userId}`);
+
+      this.reconnectAttempts = 0;
     };
 
-    ws.onmessage = (event) => {
+    socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as WsEvent;
+
+        console.log("[WS] Event:", data);
 
         this.listeners.forEach((listener) => {
           listener(data);
         });
       } catch (error) {
-        console.error(
-          "[WS] Invalid event:",
-          event.data,
-          error
-        );
+        console.error("[WS] Invalid message:", event.data, error);
       }
     };
 
-    ws.onerror = (error) => {
-      console.error("[WS] Error:", error);
-      console.error("[WS] URL:", ws.url);
-      console.error(
-        "[WS] ReadyState:",
-        ws.readyState
-      );
+    socket.onerror = () => {
+      /*
+       * Browser WebSocket errors intentionally contain very little
+       * information. The useful information comes from onclose.
+       */
+      console.error("[WS] Connection error:", socket.url);
     };
 
-    ws.onclose = (event) => {
+    socket.onclose = (event) => {
       console.log(
-        `[WS] Disconnected user ${this.userId}`,
-        {
-          code: event.code,
-          reason: event.reason,
-          wasClean: event.wasClean,
-        }
+        `[WS] Closed user=${this.userId} code=${event.code} reason=${event.reason || "none"}`
       );
 
-      // Only clear if this is still the active socket
-      if (this.ws === ws) {
+      if (this.ws === socket) {
         this.ws = null;
       }
 
@@ -110,36 +120,51 @@ class WebSocketManager {
         return;
       }
 
-      if (this.reconnectTimer) {
-        clearTimeout(this.reconnectTimer);
-      }
-
-      this.reconnectTimer = setTimeout(() => {
-        this.reconnectTimer = null;
-        this._connect();
-      }, 3000);
+      this.scheduleReconnect();
     };
   }
 
-  send(data: object) {
-    if (
-      this.ws &&
-      this.ws.readyState === WebSocket.OPEN
-    ) {
-      this.ws.send(JSON.stringify(data));
+  private scheduleReconnect() {
+    if (!this.shouldReconnect || !this.userId) {
       return;
     }
 
-    console.warn(
-      "[WS] Cannot send - socket not connected"
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+
+    const delay = Math.min(
+      1000 * Math.pow(2, this.reconnectAttempts),
+      this.maxReconnectDelay
     );
+
+    this.reconnectAttempts++;
+
+    console.log(`[WS] Reconnecting in ${delay}ms...`);
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connectSocket();
+    }, delay);
   }
 
-  sendTyping(
-    conversationId: number,
-    isTyping: boolean
-  ) {
-    this.send({
+  send(data: object) {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      console.warn("[WS] Cannot send - socket not connected");
+      return false;
+    }
+
+    try {
+      this.ws.send(JSON.stringify(data));
+      return true;
+    } catch (error) {
+      console.error("[WS] Send failed:", error);
+      return false;
+    }
+  }
+
+  sendTyping(conversationId: number, isTyping: boolean) {
+    return this.send({
       type: "typing",
       conversation_id: conversationId,
       is_typing: isTyping,
@@ -163,19 +188,28 @@ class WebSocketManager {
     }
 
     if (this.ws) {
-      this.ws.close();
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onerror = null;
+      this.ws.onclose = null;
+
+      if (
+        this.ws.readyState === WebSocket.OPEN ||
+        this.ws.readyState === WebSocket.CONNECTING
+      ) {
+        this.ws.close(1000, "Client disconnected");
+      }
+
       this.ws = null;
     }
 
     this.userId = null;
+    this.reconnectAttempts = 0;
   }
 
   get isConnected() {
-    return (
-      this.ws?.readyState === WebSocket.OPEN
-    );
+    return this.ws?.readyState === WebSocket.OPEN;
   }
 }
 
-export const wsManager =
-  new WebSocketManager();
+export const wsManager = new WebSocketManager();
